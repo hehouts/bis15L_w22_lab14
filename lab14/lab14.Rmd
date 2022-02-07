@@ -1,0 +1,289 @@
+---
+title: "Lab Meeting Demo -- Data Visualization: `ggplot` part 4"
+output:
+  html_document:
+    theme: spacelab
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+---
+
+## Lab meeting goals
+* solicit feed back & ideas on how to introduce these concepts to people with non-begginer familiarity with the topic
+* solicit content ideas and general knowledge
+  + what r markdown features do you know and love?
+  + if you recall, what are things you wish you'd learned about earlier?
+
+## Learning Goals
+*At the end of this exercise, you will be able to:*    
+1. Create Violin plots.
+2. Create Violin plots.Build heat maps using `ggplot.` 
+3. Customize labels on axes using `labs` and `themes`.  
+4. Use `color`, `fill`, and `group` to customize plots and improve overall aesthetics.  
+
+
+## Resources
+- [ggplot2 cheatsheet](https://www.rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf)
+- [R for Data Science](https://r4ds.had.co.nz/)
+- [R Cookbook](http://www.cookbook-r.com/)
+- [`ggplot` themes](https://ggplot2.tidyverse.org/reference/ggtheme.html)
+- [Rebecca Barter `ggplot` Tutorial](http://www.rebeccabarter.com/blog/2017-11-17-ggplot2_tutorial/)
+- [R Color Brewer](http://colorbrewer2.org/#type=sequential&scheme=BuGn&n=3)
+
+## Install `RColorBrewer`, `paletteer`, and `ggthemes`
+`RColorBrewer` and `paletteer` are helpful in selecting palettes of color that work with your data. 
+```{r, eval=FALSE, echo=TRUE}
+#install.packages("RColorBrewer")
+#install.packages("paletteer")
+#install.packages("ggthemes")
+```
+
+## Load the libraries
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(RColorBrewer)
+library(paletteer)
+library(janitor)
+library(here)
+```
+
+```{r}
+options(scipen=999) #cancels the use of scientific notation for the session
+```
+
+##Resources
+- [ggplot2 cheatsheet](https://www.rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf)
+- [`ggplot` themes](https://ggplot2.tidyverse.org/reference/ggtheme.html)
+- [Rebecca Barter `ggplot` Tutorial](http://www.rebeccabarter.com/blog/2017-11-17-ggplot2_tutorial/)
+
+## Load the libraries
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(here)
+library(janitor)
+```
+
+## Load the data
+
+Let's revisit the mammal life history data to practice our ggplot skills. The [data](http://esapubs.org/archive/ecol/E084/093/) are from: *S. K. Morgan Ernest. 2003. Life history characteristics of placental non-volant mammals. Ecology 84:3402.*
+
+```{r message=FALSE, warning=FALSE}
+life_history <- read_csv(here("data", "mammal_lifehistories_v2.csv")) %>% na_if("-999") %>% clean_names()
+```
+
+
+## Violin Plots
+Violin plots show the distribution of continuous data across a categorical variable.
+Violin plots are similar to box plots and dot plots
+
+lets get an idea of the data structure
+```{r}
+life_history %>% 
+  count(order, sort=T)
+```
+```{r}
+str(life_history)
+```
+
+Here, we visualize the distribution of average mass across orders. 
+Since the orders are so diverse in size (an ant v.s. a giraffe), lets use a log function on mass. 
+Also, let's flip the axes to make the graph more friendly for landscape orientation.
+```{r}
+life_history %>%
+  ggplot(aes(x = order, y = log(mass))) +
+  geom_boxplot(na.rm = TRUE)+
+  coord_flip()
+```
+
+
+Let's focus in on a small set of primates, _Cercopithecidae_ family, i.e. Old-world monkeys, and generate a boxplot for each taxonomic genus.
+```{r}
+life_history %>%
+  filter(family == "Cercopithecidae")%>%
+  ggplot(aes(x = genus, y = mass)) +
+  geom_boxplot(na.rm = TRUE) +
+  coord_flip()
+```
+
+Box plots are great at showing median, skew, and outliers. 
+We can visualize skew better by adding a point layer with `geom_point()`
+
+```{r}
+life_history %>%
+    filter(family == "Cercopithecidae")%>%
+    ggplot(aes(x = genus, y = mass)) +
+    geom_boxplot(color = "grey", na.rm = TRUE) +
+    geom_point(alpha = 0.5, color = "red", na.rm = TRUE) + #alpha indicates transparency 
+    coord_flip()
+```
+By using the geom_point() layer, we see that there are only a few observations for each group (genus).
+Lets further zoom in on 3 genera of monkey: Macaca, Cercopithecus, and Trachypithecus
+
+
+we can use violin plots to visualize the distribution of these points on another axis:
+
+```{r, warning=FALSE}
+life_history %>%
+  filter(genus == "Macaca" | genus == "Cercopithecus"| genus == "Trachypithecus")%>%
+  ggplot(aes(x = genus, y = log(mass))) +
+  geom_boxplot(color = "grey", na.rm = TRUE) +
+  geom_point(alpha = 0.3, color = "red", na.rm = TRUE) + #alpha indicates transparency 
+  geom_violin(alpha = .3, na.rm = TRUE) +
+  coord_flip()
+```
+
+
+
+Lets zoom out and apply this graph style to a few primate families, Cercopithecidae, Hominidae and Cebidae 
+```{r}
+life_history %>%
+  filter(family == "Cercopithecidae" | family == "Indridae" | family == "Cebidae") %>%
+  ggplot(aes(x = family, y = mass)) +
+  geom_point(alpha = 0.3, color = "red", na.rm = TRUE) + #alpha indicates transparency 
+  geom_violin(alpha = .3, na.rm = TRUE) +
+  coord_flip()
+```
+we can use violin plots to visualize the distribution of these points on another axis:
+
+by default, the violin plot height is based on normalized area. we can switch to count with:
+
+```{r}
+life_history %>%
+  filter(family == "Cercopithecidae" | family == "Indridae" | family == "Cebidae") %>%
+  ggplot(aes(x = family, y = mass)) +
+  geom_point(alpha = 0.3, color = "red", na.rm = TRUE) + #alpha indicates transparency 
+  geom_violin(scale = "count", alpha = .3, na.rm = TRUE) +
+  coord_flip()
+```
+
+
+
+## Heat maps
+[heat maps](https://www.r-graph-gallery.com/79-levelplot-with-ggplot2.html) are a great tool for visualizing data across 2 categorical variables.
+
+
+## Example 1: column names are data
+The following data show results from a drug trial with four treatments on six patients. The values represent resting heart rate.  
+```{r}
+heartrate <- readr::read_csv("data/heartrate.csv")
+heartrate
+```
+
+Let's pivot this data, so there is no data stored in variables
+```{r}
+heartrate_long <- heartrate %>% 
+  pivot_longer(-patient, #patient does not pivot
+               names_to = "drug", 
+               values_to = "heartrate"
+               )
+heartrate_long
+```
+
+Now we can use `geom_tile()` to represent the contents
+```{r}
+heartrate_long %>%
+  ggplot(aes(patient, drug, fill= heartrate)) + 
+  geom_tile() +
+  scale_fill_gradient(low="yellow", high="red")
+```
+
+
+
+Lets try this on a larger data set. 
+Remember this one from the [United Nations Food and Agriculture Organization](http://www.fao.org/about/en/) on world fisheries? These data are pretty wild, so we need to do some cleaning. First, load the data.  
+
+Load the data `FAO_1950to2012_111914.csv` as a new object titled `fisheries`.
+```{r}
+fisheries <- readr::read_csv(file = "data/FAO_1950to2012_111914.csv")
+```
+
+
+
+clean up names, 
+```{r}
+fisheries <- janitor::clean_names(fisheries)
+names(fisheries)
+```
+
+lets practice using across() to change some interesting variables to factors
+```{r}
+fisheries <- 
+  fisheries %>% mutate(across(c(country, isscaap_group_number, asfis_species_number, fao_major_fishing_area), as_factor))
+```
+
+Notice that these data are in wide format - year (a variable) is represented as columns. Let's practice pivoting long so we can make a heatmap: 
+```{r}
+fisheries_long <- fisheries %>% 
+pivot_longer(cols = starts_with("x"),
+               names_to = "year",
+               values_to = "catch",
+               values_drop_na = TRUE) %>% 
+  mutate(year= as.numeric(str_replace(year, 'x', ''))) %>% 
+  mutate(catch= str_replace(catch, c(' F'), replacement = '')) %>% 
+  mutate(catch= str_replace(catch, c('...'), replacement = '')) %>% 
+  mutate(catch= str_replace(catch, c('-'), replacement = '')) %>% 
+  mutate(catch= str_replace(catch, c('0 0'), replacement = ''))
+
+fisheries_long$catch <- as.numeric(fisheries_long$catch)
+```
+
+
+which countries caught a lot of squid in the 90's?
+```{r}
+
+fisheries_long %>%  
+  filter(isscaap_taxonomic_group == "Squids, cuttlefishes, octopuses") %>% 
+  filter(between(year, 1990, 1999)) %>%
+  group_by(country) %>% 
+  summarize(catch_total=sum(catch, na.rm=T)) %>% 
+  arrange(desc(catch_total))
+```
+
+```{r}
+
+fish_tycoons <-   fisheries_long%>%
+  filter(isscaap_taxonomic_group == "Squids, cuttlefishes, octopuses") %>% 
+  filter(between(year, 1990, 1999)) %>%
+   filter( country == "Japan" |			
+   country == "Korea, Republic of" |
+   country == "Taiwan Province of China" |
+  country == "Argentina" |
+   country == "China" |
+   country == "Mexico"	|
+   country == "Thailand" |
+   country == "France" |
+   country == "United States of America" |
+   country == "Spain"
+            )%>%
+  group_by(country) %>% 
+  summarize(catch_total=sum(catch, na.rm=T), catch = catch, year = year) %>% 
+  arrange(desc(catch_total))
+  
+```
+```{r}
+fish_tycoons%>%
+  ggplot(aes(x = year, y = country, fill= log(catch))) + 
+  geom_tile(na.rm = T) +
+  scale_fill_gradient(low="yellow", high="red")
+
+```
+
+
+## Formatting reports: recapping markdown
+
+check out this (source)[https://rmarkdown.rstudio.com/authoring_basics.html] for more
+
+We know about code chunks
+
+```{r}
+names(heartrate_long)
+```
+
+but we can also use back ticks to put a small bit of code in `line with the text`
+
+we can insert hyperlinks into out reports:
+like (this)[https://en.wikipedia.org/wiki/Hyperlink]
+
+
+
